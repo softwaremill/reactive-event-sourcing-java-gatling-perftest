@@ -1,0 +1,36 @@
+on:
+  push:
+    branches:
+      - perftest
+
+jobs:
+  docker-build:
+    env:
+      IMAGE: eu.gcr.io/reactive-event-sourcing-6f7f/reactive-es-java-perftest-gatling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: adopt
+          java-version: '17'
+      - name: Build image
+        run: ./mvnw package -DskipTests
+      - name: Tag image
+        run: docker tag reactive-es-java-perftest:latest ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
+      - name: 'Authenticate to Google Cloud'
+        id: 'auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+          token_format: 'access_token'
+      - name: Login to docker registry
+        uses: 'docker/login-action@v1'
+        with:
+          registry: 'eu.gcr.io'
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.access_token }}'
+      - name: Push image
+        run: docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
