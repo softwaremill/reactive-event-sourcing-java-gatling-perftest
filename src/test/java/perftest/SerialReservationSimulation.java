@@ -34,7 +34,8 @@ public class SerialReservationSimulation extends BasicSimulation {
                     .times(capacityLoadTesting.times)
                     .eachLevelLasting(capacityLoadTesting.levelLastingSec)
                     .separatedByRampsLasting(20)
-                    .startingFrom(capacityLoadTesting.from)));
+                    .startingFrom(capacityLoadTesting.from)))
+                    .protocols(httpProtocol);
         } else {
             setUp(simpleScenario.injectOpen(rampUsersPerSec(1).to(usersPerSec).during(15), constantUsersPerSec(usersPerSec).during(duringSec))
                     .protocols(httpProtocol));
