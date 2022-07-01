@@ -1,6 +1,7 @@
 package perftest;
 
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigBeanFactory;
 import com.typesafe.config.ConfigFactory;
 import io.gatling.javaapi.core.Body;
 import io.gatling.javaapi.core.Simulation;
@@ -25,6 +26,7 @@ abstract class BasicSimulation extends Simulation {
     int maxSeats = simulationConfig.getInt("max-seats");
     int usersPerSec = simulationConfig.getInt("users-per-sec");
     int duringSec = simulationConfig.getInt("during-sec");
+    CapacityLoadTesting capacityLoadTesting = ConfigBeanFactory.create(simulationConfig.getConfig("capacity-load-testing"), CapacityLoadTesting.class);
     List<Integer> randomSeatNums = List.range(0, maxSeats).shuffle();
 
     HttpProtocolBuilder httpProtocol = http
