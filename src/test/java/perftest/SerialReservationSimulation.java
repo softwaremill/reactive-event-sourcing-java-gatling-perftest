@@ -28,7 +28,7 @@ public class SerialReservationSimulation extends BasicSimulation {
             );
 
     {
-        log.info("Configuration: "+capacityLoadTesting);
+        log.info("Configuration: " + capacityLoadTesting);
         if (capacityLoadTesting.enabled) {
             setUp(simpleScenario.injectOpen(incrementUsersPerSec(capacityLoadTesting.step)
                     .times(capacityLoadTesting.times)
