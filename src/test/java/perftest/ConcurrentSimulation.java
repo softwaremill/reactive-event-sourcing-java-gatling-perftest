@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.incrementUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
 
@@ -18,7 +19,9 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentSimulation.class);
 
-    private int howManyShows = usersPerSec * duringSec;
+    private int showCreationConcurrentUsers = 500;
+    private int requestsPerSec = usersPerSec * maxSeats;
+    private int howManyShows = (requestsPerSec * duringSec); //+1000 additional margin
     private List<String> showIds = List.range(0, howManyShows)
             .map(__ -> UUID.randomUUID().toString());
 
@@ -46,12 +49,12 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     {
         log.info("Configuration: " + capacityLoadTesting);
-        setUp(createShows.injectOpen(constantUsersPerSec(1000).during(howManyShows / 1000)).andThen(
-                reserveSeats.injectOpen(constantUsersPerSec(usersPerSec).during(duringSec))))
+        setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
+                reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
                 .protocols(httpProtocol);
 
 //        if (capacityLoadTesting.enabled) {
-//            setUp(simpleScenario.injectOpen(incrementUsersPerSec(capacityLoadTesting.step)
+//            setUp(reserveSeats.injectOpen(incrementUsersPerSec(capacityLoadTesting.step)
 //                    .times(capacityLoadTesting.times)
 //                    .eachLevelLasting(capacityLoadTesting.levelLastingSec)
 //                    .separatedByRampsLasting(20)
