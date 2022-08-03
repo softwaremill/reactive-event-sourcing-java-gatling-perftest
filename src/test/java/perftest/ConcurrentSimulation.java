@@ -23,7 +23,7 @@ public class ConcurrentSimulation extends BasicSimulation {
     private int showCreationConcurrentUsers = 500;
     private int requestsPerSec = usersPerSec * maxSeats;
     private int howManyShows = (usersPerSec * duringSec);
-    private List<String> showIds = IntStream.range(0, maxSeats)
+    private List<String> showIds = IntStream.range(0, howManyShows)
             .mapToObj(__ -> UUID.randomUUID().toString()).toList();
 
 
