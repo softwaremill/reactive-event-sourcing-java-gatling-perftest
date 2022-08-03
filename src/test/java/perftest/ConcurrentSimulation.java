@@ -1,17 +1,18 @@
 package perftest;
 
 import io.gatling.javaapi.core.ScenarioBuilder;
-import io.vavr.collection.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
-import static io.gatling.javaapi.core.CoreDsl.incrementUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
 
@@ -21,17 +22,31 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     private int showCreationConcurrentUsers = 500;
     private int requestsPerSec = usersPerSec * maxSeats;
-    private int howManyShows = (requestsPerSec * duringSec); //+1000 additional margin
-    private List<String> showIds = List.range(0, howManyShows)
-            .map(__ -> UUID.randomUUID().toString());
+    private int howManyShows = (usersPerSec * duringSec);
+    private List<String> showIds = IntStream.range(0, maxSeats)
+            .mapToObj(__ -> UUID.randomUUID().toString()).toList();
 
 
-    Iterator<Map<String, Object>> showIdsFeeder = showIds.map(showId -> Collections.<String, Object>singletonMap("showId", showId)).iterator();
-    Iterator<Map<String, Object>> reservationsFeeder = showIds
-            .flatMap(showId -> List.range(0, maxSeats)
-                    .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum))
-            )
-            .shuffle()
+    Iterator<Map<String, Object>> showIdsFeeder = showIds.stream().map(showId -> Collections.<String, Object>singletonMap("showId", showId)).iterator();
+//    Iterator<Map<String, Object>> reservationsFeeder = showIds
+//            .flatMap(showId -> {
+//                        log.info("tworze");
+//                        return List.range(0, maxSeats)
+//                                .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum));
+//                    }
+//            )
+//            .shuffle()
+//            .iterator();
+
+    Iterator<Map<String, Object>> reservationsFeeder = showIds.stream()
+            .flatMap(showId -> {
+                log.info("generating new batch of seats reservations");
+                java.util.List<Map<String, Object>> showReservations = IntStream.range(0, maxSeats).boxed()
+                        .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum))
+                        .collect(Collectors.toList());
+                java.util.Collections.shuffle(showReservations);
+                return showReservations.stream();
+            })
             .iterator();
 
     ScenarioBuilder createShows = scenario("Create show scenario")
@@ -48,18 +63,18 @@ public class ConcurrentSimulation extends BasicSimulation {
                     .body(reserveSeatPayload));
 
     {
-        log.info("Configuration: " + capacityLoadTesting);
+        log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting);
         setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
                 reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
                 .protocols(httpProtocol);
 
 //        if (capacityLoadTesting.enabled) {
-//            setUp(reserveSeats.injectOpen(incrementUsersPerSec(capacityLoadTesting.step)
-//                    .times(capacityLoadTesting.times)
-//                    .eachLevelLasting(capacityLoadTesting.levelLastingSec)
-//                    .separatedByRampsLasting(20)
-//                    .startingFrom(capacityLoadTesting.from)))
-//                    .protocols(httpProtocol);
+//        setUp(reserveSeats.injectOpen(incrementUsersPerSec(capacityLoadTesting.step * maxSeats)
+//                .times(capacityLoadTesting.times)
+//                .eachLevelLasting(capacityLoadTesting.levelLastingSec)
+//                .separatedByRampsLasting(20)
+//                .startingFrom(capacityLoadTesting.from * maxSeats)))
+//                .protocols(httpProtocol);
 //        } else {
 //            setUp(simpleScenario.injectOpen(rampUsersPerSec(1).to(usersPerSec).during(15), constantUsersPerSec(usersPerSec).during(duringSec))
 //                    .protocols(httpProtocol));
