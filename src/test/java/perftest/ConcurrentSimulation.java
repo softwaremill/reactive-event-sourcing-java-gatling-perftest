@@ -20,7 +20,7 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentSimulation.class);
 
-    private int showCreationConcurrentUsers = 500;
+    private int showCreationConcurrentUsers = usersPerSec;
     private int requestsPerSec = usersPerSec * maxSeats;
     private int howManyShows = (usersPerSec * duringSec);
     private List<String> showIds = IntStream.range(0, howManyShows)
@@ -40,7 +40,7 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     Iterator<Map<String, Object>> reservationsFeeder = showIds.stream()
             .flatMap(showId -> {
-                log.info("generating new batch of seats reservations");
+                log.debug("generating new batch of seats reservations");
                 java.util.List<Map<String, Object>> showReservations = IntStream.range(0, maxSeats).boxed()
                         .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum))
                         .collect(Collectors.toList());
