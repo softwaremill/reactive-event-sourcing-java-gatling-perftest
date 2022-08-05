@@ -48,6 +48,7 @@
                 <configuration>
                     <jvmArgs>
                         <arg>-XX:ActiveProcessorCount=4</arg>
+                        <arg>-Djava.net.preferIPv6Addresses=false</arg>
                     </jvmArgs>
                     <overrideJvmArgs>true</overrideJvmArgs>
                     <!-- Enterprise Cloud (https://cloud.gatling.io/) configuration reference: https://gatling.io/docs/gatling/reference/current/extensions/maven_plugin/#working-with-gatling-enterprise-cloud -->
