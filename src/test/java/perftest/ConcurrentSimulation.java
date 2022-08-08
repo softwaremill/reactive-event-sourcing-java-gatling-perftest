@@ -44,7 +44,7 @@ public class ConcurrentSimulation extends BasicSimulation {
                 java.util.List<Map<String, Object>> showReservations = IntStream.range(0, maxSeats).boxed()
                         .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum))
                         .collect(Collectors.toList());
-                java.util.Collections.shuffle(showReservations);
+//                java.util.Collections.shuffle(showReservations);
                 return showReservations.stream();
             })
             .iterator();
