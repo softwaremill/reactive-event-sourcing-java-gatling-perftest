@@ -31,7 +31,7 @@ abstract class BasicSimulation extends Simulation {
 
     HttpProtocolBuilder httpProtocol = http
             .baseUrl(baseUrl)
-//            .shareConnections()
+            .shareConnections()
             .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
             .acceptEncodingHeader("gzip, deflate")
             .acceptLanguageHeader("en-US,en;q=0.5")
