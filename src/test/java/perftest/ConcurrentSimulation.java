@@ -65,7 +65,7 @@ public class ConcurrentSimulation extends BasicSimulation {
     {
         log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting);
         setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
-                reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
+                reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec).randomized())))
                 .protocols(httpProtocol);
 
 //        if (capacityLoadTesting.enabled) {
