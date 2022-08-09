@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.incrementUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
 
@@ -21,9 +22,22 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentSimulation.class);
 
-    private int showCreationConcurrentUsers = 100;
+    private int showCreationConcurrentUsers = 1000;
     private int requestsPerSec = usersPerSec * maxSeats;
-    private int howManyShows = (usersPerSec * duringSec);
+    private int howManyShows = howManyShows();
+
+    private int howManyShows() {
+        if (capacityLoadTesting.enabled) {
+            int startingRate = capacityLoadTesting.from * maxSeats;
+            int rateIncrement = capacityLoadTesting.step * maxSeats;
+            return IntStream.range(0, capacityLoadTesting.times)
+                    .map(iteration -> (startingRate + iteration * rateIncrement) * capacityLoadTesting.levelLastingSec)
+                    .sum();
+        }else {
+            return usersPerSec * duringSec;
+        }
+    }
+
     private List<String> showIds = IntStream.range(0, howManyShows)
             .mapToObj(__ -> UUID.randomUUID().toString()).toList();
 
@@ -32,15 +46,6 @@ public class ConcurrentSimulation extends BasicSimulation {
 
 
     Iterator<Map<String, Object>> showIdsFeeder = showIds.stream().map(showId -> Collections.<String, Object>singletonMap("showId", showId)).iterator();
-//    Iterator<Map<String, Object>> reservationsFeeder = showIds
-//            .flatMap(showId -> {
-//                        log.info("tworze");
-//                        return List.range(0, maxSeats)
-//                                .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum));
-//                    }
-//            )
-//            .shuffle()
-//            .iterator();
 
     Iterator<Map<String, Object>> reservationsFeeder = showIds.stream()
             .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / chunkSize))
@@ -70,21 +75,23 @@ public class ConcurrentSimulation extends BasicSimulation {
                     .body(reserveSeatPayload));
 
     {
-        log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting);
-        setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
-                reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
-                .protocols(httpProtocol);
+        log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}, howManyShows={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting, howManyShows);
 
-//        if (capacityLoadTesting.enabled) {
-//        setUp(reserveSeats.injectOpen(incrementUsersPerSec(capacityLoadTesting.step * maxSeats)
-//                .times(capacityLoadTesting.times)
-//                .eachLevelLasting(capacityLoadTesting.levelLastingSec)
-//                .separatedByRampsLasting(20)
-//                .startingFrom(capacityLoadTesting.from * maxSeats)))
-//                .protocols(httpProtocol);
-//        } else {
-//            setUp(simpleScenario.injectOpen(rampUsersPerSec(1).to(usersPerSec).during(15), constantUsersPerSec(usersPerSec).during(duringSec))
-//                    .protocols(httpProtocol));
-//        }
+        if (capacityLoadTesting.enabled) {
+            int startingRate = capacityLoadTesting.from * maxSeats;
+            int rateIncrement = capacityLoadTesting.step * maxSeats;
+
+            setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
+                            reserveSeats.injectOpen(incrementUsersPerSec(rateIncrement)
+                                    .times(capacityLoadTesting.times)
+                                    .eachLevelLasting(capacityLoadTesting.levelLastingSec)
+//                                    .separatedByRampsLasting(20)
+                                    .startingFrom(startingRate)))
+                    .protocols(httpProtocol));
+        } else {
+            setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
+                    reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
+                    .protocols(httpProtocol);
+        }
     }
 }
