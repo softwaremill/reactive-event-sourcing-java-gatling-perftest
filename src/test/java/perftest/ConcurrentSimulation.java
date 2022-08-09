@@ -27,7 +27,7 @@ public class ConcurrentSimulation extends BasicSimulation {
     private List<String> showIds = IntStream.range(0, howManyShows)
             .mapToObj(__ -> UUID.randomUUID().toString()).toList();
 
-    final int chunkSize = 10;
+    final int chunkSize = 5;
     final AtomicInteger counter = new AtomicInteger();
 
 

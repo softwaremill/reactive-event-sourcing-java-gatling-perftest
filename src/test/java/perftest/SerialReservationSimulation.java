@@ -27,6 +27,9 @@ public class SerialReservationSimulation extends BasicSimulation {
                             .body(reserveSeatPayload))
             );
 
+    //30 * 50 = 1500 req/s
+//1 res 1 mi
+    // calos 50 ms
     {
         log.info("Configuration: " + capacityLoadTesting);
         if (capacityLoadTesting.enabled) {
