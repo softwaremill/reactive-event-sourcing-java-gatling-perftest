@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -26,6 +27,9 @@ public class ConcurrentSimulation extends BasicSimulation {
     private List<String> showIds = IntStream.range(0, howManyShows)
             .mapToObj(__ -> UUID.randomUUID().toString()).toList();
 
+    final int chunkSize = 10;
+    final AtomicInteger counter = new AtomicInteger();
+
 
     Iterator<Map<String, Object>> showIdsFeeder = showIds.stream().map(showId -> Collections.<String, Object>singletonMap("showId", showId)).iterator();
 //    Iterator<Map<String, Object>> reservationsFeeder = showIds
@@ -39,12 +43,15 @@ public class ConcurrentSimulation extends BasicSimulation {
 //            .iterator();
 
     Iterator<Map<String, Object>> reservationsFeeder = showIds.stream()
-            .flatMap(showId -> {
-                log.debug("generating new batch of seats reservations");
-                java.util.List<Map<String, Object>> showReservations = IntStream.range(0, maxSeats).boxed()
-                        .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum))
-                        .collect(Collectors.toList());
-//                java.util.Collections.shuffle(showReservations);
+            .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / chunkSize))
+            .values().stream()
+            .flatMap(showIds -> {
+                log.debug("generating new batch of seats reservations for group size: " + showIds.size());
+                List<Map<String, Object>> showReservations = showIds.stream().flatMap(showId -> {
+                    return IntStream.range(0, maxSeats).boxed()
+                            .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum));
+                }).collect(Collectors.toList());
+                java.util.Collections.shuffle(showReservations);
                 return showReservations.stream();
             })
             .iterator();
@@ -65,7 +72,7 @@ public class ConcurrentSimulation extends BasicSimulation {
     {
         log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting);
         setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
-                reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec).randomized())))
+                reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
                 .protocols(httpProtocol);
 
 //        if (capacityLoadTesting.enabled) {
