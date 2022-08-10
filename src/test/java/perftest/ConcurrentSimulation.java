@@ -33,7 +33,7 @@ public class ConcurrentSimulation extends BasicSimulation {
                     .map(iteration -> (startingRate + iteration * rateIncrement) * capacityLoadTesting.levelLastingSec)
                     .sum();
         }else {
-            return usersPerSec * duringSec;
+            return requestsPerSec * duringSec;
         }
     }
 
