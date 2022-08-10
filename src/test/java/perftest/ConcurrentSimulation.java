@@ -22,7 +22,7 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentSimulation.class);
 
-    private int showCreationConcurrentUsers = 2000;
+    private int showCreationConcurrentUsers = 1000;
     private int requestsPerSec = usersPerSec * maxSeats;
     private int howManyShows = howManyShows();
 
