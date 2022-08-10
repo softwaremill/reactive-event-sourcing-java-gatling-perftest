@@ -26,6 +26,7 @@ abstract class BasicSimulation extends Simulation {
     int maxSeats = simulationConfig.getInt("max-seats");
     int usersPerSec = simulationConfig.getInt("users-per-sec");
     int duringSec = simulationConfig.getInt("during-sec");
+    int requestsGroupingSize = simulationConfig.getInt("requests-grouping-size");
     CapacityLoadTesting capacityLoadTesting = ConfigBeanFactory.create(simulationConfig.getConfig("capacity-load-testing"), CapacityLoadTesting.class);
     List<Integer> randomSeatNums = List.range(0, maxSeats).shuffle();
 

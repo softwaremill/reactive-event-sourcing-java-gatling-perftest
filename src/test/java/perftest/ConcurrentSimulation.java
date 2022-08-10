@@ -41,21 +41,20 @@ public class ConcurrentSimulation extends BasicSimulation {
     private List<String> showIds = IntStream.range(0, howManyShows)
             .mapToObj(__ -> UUID.randomUUID().toString()).toList();
 
-    final int chunkSize = 5;
     final AtomicInteger counter = new AtomicInteger();
-
 
     Iterator<Map<String, Object>> showIdsFeeder = showIds.stream().map(showId -> Collections.<String, Object>singletonMap("showId", showId)).iterator();
 
     Iterator<Map<String, Object>> reservationsFeeder = showIds.stream()
-            .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / chunkSize))
+            .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / requestsGroupingSize))
             .values().stream()
             .flatMap(showIds -> {
                 log.debug("generating new batch of seats reservations for group size: " + showIds.size());
-                List<Map<String, Object>> showReservations = showIds.stream().flatMap(showId -> {
-                    return IntStream.range(0, maxSeats).boxed()
-                            .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum));
-                }).collect(Collectors.toList());
+                List<Map<String, Object>> showReservations = showIds.stream()
+                        .flatMap(showId ->
+                                IntStream.range(0, maxSeats).boxed()
+                                            .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum)))
+                                            .collect(Collectors.toList());
                 java.util.Collections.shuffle(showReservations);
                 return showReservations.stream();
             })
