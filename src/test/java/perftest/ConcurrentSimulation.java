@@ -19,6 +19,7 @@ import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.incrementUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.listFeeder;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.core.CoreDsl.tryMax;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static java.util.stream.Stream.concat;
 
@@ -82,12 +83,12 @@ public class ConcurrentSimulation extends BasicSimulation {
     ScenarioBuilder reserveSeatsOrCancelReservation = scenario("Reserve seats or cancel reservation")
             .feed(listFeeder(reserveOrCancelActions).circular())
             .doSwitch("#{action}").on(
-                    Choice.withKey(RESERVE_ACTION, exec(http("reserve-seat")
+                    Choice.withKey(RESERVE_ACTION, tryMax(5).on(exec(http("reserve-seat") //tryMax in case of concurrent reservation/cancellation
                             .patch("shows/#{showId}/seats/#{seatNum}")
-                            .body(reserveSeatPayload))),
-                    Choice.withKey(CANCEL_RESERVATION_ACTION, exec(http("cancel-reservation")
+                            .body(reserveSeatPayload)))),
+                    Choice.withKey(CANCEL_RESERVATION_ACTION, tryMax(5).on(exec(http("cancel-reservation")
                             .patch("shows/#{showId}/seats/#{seatNum}")
-                            .body(cancelReservationPayload)))
+                            .body(cancelReservationPayload))))
             );
 
     {
