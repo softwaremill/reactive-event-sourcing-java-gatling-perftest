@@ -1,5 +1,6 @@
 package perftest;
 
+import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,16 +15,22 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.incrementUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.listFeeder;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
+import static java.util.stream.Stream.concat;
 
 public class ConcurrentSimulation extends BasicSimulation {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentSimulation.class);
+    public static final String RESERVE_ACTION = "reserve";
+    public static final String CANCEL_RESERVATION_ACTION = "cancel";
 
     private int requestsPerSec = usersPerSec * maxSeats;
-    private int howManyShows = howManyShows();
+    private int howManyShows = 10000;
+
 
     private int howManyShows() {
         if (capacityLoadTesting.enabled) {
@@ -32,7 +39,7 @@ public class ConcurrentSimulation extends BasicSimulation {
             return IntStream.range(0, capacityLoadTesting.times)
                     .map(iteration -> (startingRate + iteration * rateIncrement) * capacityLoadTesting.levelLastingSec)
                     .sum();
-        }else {
+        } else {
             return requestsPerSec * duringSec;
         }
     }
@@ -44,20 +51,26 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     Iterator<Map<String, Object>> showIdsFeeder = showIds.stream().map(showId -> Collections.<String, Object>singletonMap("showId", showId)).iterator();
 
-    Iterator<Map<String, Object>> reservationsFeeder = showIds.stream()
+    List<Map<String, Object>> reserveOrCancelActions = showIds.stream()
             .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / requestsGroupingSize))
             .values().stream()
             .flatMap(showIds -> {
                 log.debug("generating new batch of seats reservations for group size: " + showIds.size());
-                List<Map<String, Object>> showReservations = showIds.stream()
-                        .flatMap(showId ->
-                                IntStream.range(0, maxSeats).boxed()
-                                            .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum)))
-                                            .collect(Collectors.toList());
-                java.util.Collections.shuffle(showReservations);
-                return showReservations.stream();
+                List<Map<String, Object>> showReservations = prepareActions(showIds, RESERVE_ACTION);
+                List<Map<String, Object>> showCancellations = prepareActions(showIds, CANCEL_RESERVATION_ACTION);
+                return concat(showReservations.stream(), showCancellations.stream());
             })
-            .iterator();
+            .toList();
+
+    private List<Map<String, Object>> prepareActions(List<String> showIds, String action) {
+        List<Map<String, Object>> showReservations = showIds.stream()
+                .flatMap(showId ->
+                        IntStream.range(0, maxSeats).boxed()
+                                .map(seatNum -> Map.<String, Object>of("showId", showId, "seatNum", seatNum, "action", action)))
+                .collect(Collectors.toList());
+        Collections.shuffle(showReservations);
+        return showReservations;
+    }
 
     ScenarioBuilder createShows = scenario("Create show scenario")
             .feed(showIdsFeeder)
@@ -66,11 +79,16 @@ public class ConcurrentSimulation extends BasicSimulation {
                     .body(createShowPayload)
             );
 
-    ScenarioBuilder reserveSeats = scenario("Reserve seats")
-            .feed(reservationsFeeder)
-            .exec(http("reserve-seat")
-                    .patch("shows/#{showId}/seats/#{seatNum}")
-                    .body(reserveSeatPayload));
+    ScenarioBuilder reserveSeatsOrCancelReservation = scenario("Reserve seats or cancel reservation")
+            .feed(listFeeder(reserveOrCancelActions).circular())
+            .doSwitch("#{action}").on(
+                    Choice.withKey(RESERVE_ACTION, exec(http("reserve-seat")
+                            .patch("shows/#{showId}/seats/#{seatNum}")
+                            .body(reserveSeatPayload))),
+                    Choice.withKey(CANCEL_RESERVATION_ACTION, exec(http("cancel-reservation")
+                            .patch("shows/#{showId}/seats/#{seatNum}")
+                            .body(cancelReservationPayload)))
+            );
 
     {
         log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}, howManyShows={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting, howManyShows);
@@ -80,7 +98,7 @@ public class ConcurrentSimulation extends BasicSimulation {
             int rateIncrement = capacityLoadTesting.step * maxSeats;
 
             setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
-                            reserveSeats.injectOpen(incrementUsersPerSec(rateIncrement)
+                            reserveSeatsOrCancelReservation.injectOpen(incrementUsersPerSec(rateIncrement)
                                     .times(capacityLoadTesting.times)
                                     .eachLevelLasting(capacityLoadTesting.levelLastingSec)
 //                                    .separatedByRampsLasting(20)
@@ -88,8 +106,9 @@ public class ConcurrentSimulation extends BasicSimulation {
                     .protocols(httpProtocol));
         } else {
             setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
-                    reserveSeats.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
+                    reserveSeatsOrCancelReservation.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
                     .protocols(httpProtocol);
         }
     }
 }
+

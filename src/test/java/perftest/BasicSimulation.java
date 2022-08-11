@@ -65,4 +65,10 @@ abstract class BasicSimulation extends Simulation {
               "action": "RESERVE"
             }
             """);
+
+    Body cancelReservationPayload = StringBody("""
+            {
+              "action": "CANCEL_RESERVATION"
+            }
+            """);
 }
