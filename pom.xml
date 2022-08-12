@@ -47,9 +47,8 @@
                 <version>${gatling-maven-plugin.version}</version>
                 <configuration>
                     <jvmArgs>
-                        <arg>-XX:ActiveProcessorCount=4</arg>
+                        <arg>-XX:ActiveProcessorCount=2</arg>
                         <arg>-Djava.net.preferIPv6Addresses=false</arg>
-                        <arg>-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005</arg>
                     </jvmArgs>
                     <overrideJvmArgs>true</overrideJvmArgs>
                     <!-- Enterprise Cloud (https://cloud.gatling.io/) configuration reference: https://gatling.io/docs/gatling/reference/current/extensions/maven_plugin/#working-with-gatling-enterprise-cloud -->
