@@ -47,7 +47,7 @@
                 <version>${gatling-maven-plugin.version}</version>
                 <configuration>
                     <jvmArgs>
-                        <arg>-XX:ActiveProcessorCount=2</arg>
+                        <arg>-XX:ActiveProcessorCount=4</arg>
                         <arg>-Djava.net.preferIPv6Addresses=false</arg>
                     </jvmArgs>
                     <overrideJvmArgs>true</overrideJvmArgs>
