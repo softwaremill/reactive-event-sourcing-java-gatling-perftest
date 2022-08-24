@@ -93,23 +93,9 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     {
         log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}, howManyShows={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting, howManyShows);
-
-        if (capacityLoadTesting.enabled) {
-            int startingRate = capacityLoadTesting.from * maxSeats;
-            int rateIncrement = capacityLoadTesting.step * maxSeats;
-
-            setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
-                            reserveSeatsOrCancelReservation.injectOpen(incrementUsersPerSec(rateIncrement)
-                                    .times(capacityLoadTesting.times)
-                                    .eachLevelLasting(capacityLoadTesting.levelLastingSec)
-//                                    .separatedByRampsLasting(20)
-                                    .startingFrom(startingRate)))
-                    .protocols(httpProtocol));
-        } else {
-            setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
-                    reserveSeatsOrCancelReservation.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
-                    .protocols(httpProtocol);
-        }
+        setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
+                reserveSeatsOrCancelReservation.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
+                .protocols(httpProtocol);
     }
 }
 
