@@ -30,7 +30,7 @@ public class ConcurrentSimulation extends BasicSimulation {
     public static final String CANCEL_RESERVATION_ACTION = "cancel";
 
     private int requestsPerSec = usersPerSec * maxSeats;
-    private int howManyShows = 100000;
+    private int howManyShows = 500000;
 
 
     private int howManyShows() {
@@ -86,10 +86,10 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     ScenarioBuilder createShows = scenario("Create show scenario")
             .feed(showIdsFeeder)
-            .exec(http("create-show")
+            .tryMax(5).on(exec(http("create-show")
                     .post("/shows")
                     .body(createShowPayload)
-            );
+            ));
 
     ScenarioBuilder reserveSeatsOrCancelReservation = scenario("Reserve seats or cancel reservation")
             .feed(listFeeder(reserveActions).circular())
