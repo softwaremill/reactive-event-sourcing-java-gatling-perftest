@@ -52,16 +52,27 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     Iterator<Map<String, Object>> showIdsFeeder = showIds.stream().map(showId -> Collections.<String, Object>singletonMap("showId", showId)).iterator();
 
-    List<Map<String, Object>> reserveOrCancelActions = showIds.stream()
+    List<Map<String, Object>> reserveActions = showIds.stream()
             .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / requestsGroupingSize))
             .values().stream()
             .flatMap(showIds -> {
                 log.debug("generating new batch of seats reservations for group size: " + showIds.size());
                 List<Map<String, Object>> showReservations = prepareActions(showIds, RESERVE_ACTION);
+                return showReservations.stream();
+            })
+            .collect(Collectors.toList());
+
+    List<Map<String, Object>> cancelActions = showIds.stream()
+            .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / requestsGroupingSize))
+            .values().stream()
+            .flatMap(showIds -> {
+                log.debug("generating new batch of seats reservations for group size: " + showIds.size());
                 List<Map<String, Object>> showCancellations = prepareActions(showIds, CANCEL_RESERVATION_ACTION);
-                return concat(showReservations.stream(), showCancellations.stream());
+                return showCancellations.stream();
             })
             .toList();
+
+    boolean b = reserveActions.addAll(cancelActions);
 
     private List<Map<String, Object>> prepareActions(List<String> showIds, String action) {
         List<Map<String, Object>> showReservations = showIds.stream()
@@ -81,14 +92,14 @@ public class ConcurrentSimulation extends BasicSimulation {
             );
 
     ScenarioBuilder reserveSeatsOrCancelReservation = scenario("Reserve seats or cancel reservation")
-            .feed(listFeeder(reserveOrCancelActions).circular())
+            .feed(listFeeder(reserveActions).circular())
             .doSwitch("#{action}").on(
-                    Choice.withKey(RESERVE_ACTION, tryMax(5).on(exec(http("reserve-seat") //tryMax in case of concurrent reservation/cancellation
+                    Choice.withKey(RESERVE_ACTION, exec(http("reserve-seat") //tryMax in case of concurrent reservation/cancellation
                             .patch("shows/#{showId}/seats/#{seatNum}")
-                            .body(reserveSeatPayload)))),
-                    Choice.withKey(CANCEL_RESERVATION_ACTION, tryMax(5).on(exec(http("cancel-reservation")
+                            .body(reserveSeatPayload))),
+                    Choice.withKey(CANCEL_RESERVATION_ACTION, exec(http("cancel-reservation")
                             .patch("shows/#{showId}/seats/#{seatNum}")
-                            .body(cancelReservationPayload))))
+                            .body(cancelReservationPayload)))
             );
 
     {
