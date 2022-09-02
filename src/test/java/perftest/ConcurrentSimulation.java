@@ -30,7 +30,7 @@ public class ConcurrentSimulation extends BasicSimulation {
     public static final String CANCEL_RESERVATION_ACTION = "cancel";
 
     private int requestsPerSec = usersPerSec * maxSeats;
-    private int howManyShows = 50000;
+    private int howManyShows = 100000;
 
 
     private int howManyShows() {
