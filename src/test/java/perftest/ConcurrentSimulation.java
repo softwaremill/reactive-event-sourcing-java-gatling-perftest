@@ -104,8 +104,8 @@ public class ConcurrentSimulation extends BasicSimulation {
 
     {
         log.info("Configuration: maxSeats={}, usersPerSec={}, duringSec={}, capacity={}, howManyShows={}", maxSeats, usersPerSec, duringSec, capacityLoadTesting, howManyShows);
-        setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers))/*.andThen(
-                reserveSeatsOrCancelReservation.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec)))*/)
+        setUp(createShows.injectOpen(constantUsersPerSec(showCreationConcurrentUsers).during(howManyShows / showCreationConcurrentUsers)).andThen(
+                reserveSeatsOrCancelReservation.injectOpen(constantUsersPerSec(requestsPerSec).during(duringSec))))
                 .protocols(httpProtocol);
     }
 }
